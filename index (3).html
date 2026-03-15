@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEKTOR — AI Crypto Signals. Bull or Bear, We Don't Care.</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080809;
+    --bg2: #0e0e10;
+    --bg3: #141416;
+    --border: rgba(255,255,255,0.07);
+    --accent: #f0b429;
+    --accent2: #e05c2a;
+    --text: #f0efe8;
+    --muted: #666;
+    --muted2: #999;
+    --green: #3dd68c;
+    --red: #f55b5b;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* NOISE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 48px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,8,9,0.85);
+    backdrop-filter: blur(16px);
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+
+  nav ul {
+    list-style: none;
+    display: flex;
+    gap: 36px;
+  }
+  nav ul a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted2);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    transition: color 0.2s;
+  }
+  nav ul a:hover { color: var(--text); }
+
+  .nav-cta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    padding: 10px 24px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-cta:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 120px 48px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(240,180,41,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    border: 1px solid rgba(240,180,41,0.3);
+    padding: 6px 16px;
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero h1 {
+    font-size: clamp(48px, 7vw, 108px);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    max-width: 900px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.35s;
+  }
+
+  .hero h1 .line2 { color: var(--accent); }
+  .hero h1 .line3 { color: var(--muted); }
+
+  .hero-sub {
+    margin-top: 40px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: var(--muted2);
+    max-width: 520px;
+    line-height: 1.8;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.5s;
+  }
+
+  .hero-actions {
+    margin-top: 52px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.65s;
+  }
+
+  .btn-primary {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    padding: 16px 40px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn-primary:hover {
+    background: #ffc94d;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    padding: 16px 40px;
+    background: transparent;
+    color: var(--muted2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-ghost:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+
+  /* LIVE TICKER */
+  .ticker-wrap {
+    width: 100%;
+    margin-top: 80px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.8s;
+  }
+
+  .ticker-inner {
+    display: flex;
+    gap: 0;
+    animation: ticker 25s linear infinite;
+    width: max-content;
+  }
+
+  .tick-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 48px;
+    border-right: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .tick-item .symbol { color: var(--text); font-weight: 500; }
+  .tick-item .up { color: var(--green); }
+  .tick-item .down { color: var(--red); }
+  .tick-item .signal {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+  }
+  .tick-item .signal.long { background: rgba(61,214,140,0.12); color: var(--green); }
+  .tick-item .signal.short { background: rgba(245,91,91,0.12); color: var(--red); }
+
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* STATS */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 80px 48px;
+  }
+
+  .stat-block {
+    background: var(--bg);
+    padding: 48px 40px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards;
+  }
+  .stat-block:nth-child(1) { animation-delay: 0.1s; }
+  .stat-block:nth-child(2) { animation-delay: 0.2s; }
+  .stat-block:nth-child(3) { animation-delay: 0.3s; }
+  .stat-block:nth-child(4) { animation-delay: 0.4s; }
+
+  .stat-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+  .stat-block:hover::before { transform: scaleX(1); }
+
+  .stat-num {
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* HOW IT WORKS */
+  section { padding: 100px 48px; }
+
+  .section-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: clamp(36px, 4vw, 60px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    max-width: 680px;
+  }
+
+  .section-title .dim { color: var(--muted); }
+
+  /* STEPS */
+  .steps {
+    margin-top: 72px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .step {
+    background: var(--bg);
+    padding: 52px 44px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .step:hover { background: var(--bg2); }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    margin-bottom: 32px;
+  }
+
+  .step-icon {
+    font-size: 32px;
+    margin-bottom: 24px;
+    display: block;
+  }
+
+  .step h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .step p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.8;
+  }
+
+  /* SAMPLE SIGNAL */
+  .signal-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 40px;
+    margin-top: 72px;
+    position: relative;
+  }
+
+  .signal-demo::before {
+    content: 'LIVE SIGNAL EXAMPLE';
+    position: absolute;
+    top: -12px; left: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    background: var(--bg2);
+    padding: 0 10px;
+  }
+
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 32px;
+    margin-top: 8px;
+  }
+
+  .sig-field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .sig-field .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .sig-field .val.bull { color: var(--green); }
+  .sig-field .val.target { color: var(--accent); }
+  .sig-field .val.stop { color: var(--red); }
+  .sig-field .val.conf { color: var(--accent); }
+
+  .signal-rationale {
+    margin-top: 28px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.8;
+  }
+
+  /* PRICING */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 72px;
+  }
+
+  .plan {
+    background: var(--bg);
+    padding: 52px 44px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .plan:hover { background: var(--bg2); }
+
+  .plan.featured {
+    background: var(--bg2);
+    border: 1px solid rgba(240,180,41,0.25);
+    margin: -1px;
+    z-index: 1;
+  }
+
+  .plan-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    border: 1px solid rgba(240,180,41,0.4);
+    padding: 4px 12px;
+    display: inline-block;
+    margin-bottom: 28px;
+  }
+
+  .plan-name {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+
+  .plan-price {
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 24px 0 4px;
+  }
+  .plan-price sup { font-size: 24px; vertical-align: super; }
+  .plan-price span { font-size: 16px; color: var(--muted); font-weight: 400; }
+
+  .plan-desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 36px;
+    line-height: 1.6;
+  }
+
+  .plan-features {
+    list-style: none;
+    margin-bottom: 44px;
+  }
+  .plan-features li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .plan-features li::before { content: '→'; color: var(--accent); flex-shrink: 0; }
+  .plan-features li.dim { opacity: 0.4; }
+  .plan-features li.dim::before { content: '—'; color: var(--muted); }
+
+  .plan-btn {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .plan-btn.primary {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+  }
+  .plan-btn.primary:hover { background: #ffc94d; }
+  .plan-btn.secondary {
+    background: transparent;
+    color: var(--muted2);
+    border: 1px solid var(--border);
+  }
+  .plan-btn.secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  /* WHY AI */
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 72px;
+  }
+
+  .why-block {
+    background: var(--bg);
+    padding: 52px 44px;
+    transition: background 0.3s;
+  }
+  .why-block:hover { background: var(--bg2); }
+
+  .why-block h3 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .why-block p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--muted2);
+    line-height: 1.8;
+  }
+
+  .vs-human {
+    margin-top: 1px;
+    background: var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+  }
+
+  .vs-col {
+    background: var(--bg);
+    padding: 44px;
+  }
+  .vs-col h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    margin-bottom: 28px;
+    text-transform: uppercase;
+  }
+  .vs-col h4.bad { color: var(--red); }
+  .vs-col h4.good { color: var(--green); }
+
+  .vs-list { list-style: none; }
+  .vs-list li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted2);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .vs-list.bad li::before { content: '✗'; color: var(--red); flex-shrink: 0; }
+  .vs-list.good li::before { content: '✓'; color: var(--green); flex-shrink: 0; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+  }
+
+  footer .logo { font-size: 18px; }
+
+  .footer-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.8;
+    max-width: 400px;
+    text-align: right;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 48px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    nav ul { display: none; }
+    .hero { padding: 100px 24px 60px; }
+    .stats { grid-template-columns: 1fr 1fr; margin: 40px 24px; }
+    section { padding: 60px 24px; }
+    .steps { grid-template-columns: 1fr; }
+    .signal-grid { grid-template-columns: 1fr 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .why-grid { grid-template-columns: 1fr; }
+    .vs-human { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 24px; padding: 40px 24px; }
+    footer .footer-text { text-align: left; }
+    .divider { margin: 0 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">VEK<span>T</span>OR</div>
+  <ul>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#signals">Signals</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#why">Why AI</a></li>
+  </ul>
+  <button class="nav-cta">START FREE TRIAL →</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">AI-POWERED CRYPTO SIGNALS // EST. 2025</div>
+  <h1>
+    BULL<br>
+    <span class="line2">OR BEAR.</span><br>
+    <span class="line3">WE DON'T CARE.</span>
+  </h1>
+  <p class="hero-sub">Pure AI analysis. Zero human bias. No bags to pump. Daily trade setups for every market condition — delivered to your inbox before the open.</p>
+  <div class="hero-actions">
+    <button class="btn-primary">GET YOUR FIRST WEEK FREE →</button>
+    <button class="btn-ghost">SEE SAMPLE SIGNALS</button>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" style="width: calc(100% + 96px); margin-left: -48px;">
+    <div class="ticker-inner">
+      <!-- Set 1 -->
+      <div class="tick-item"><span class="symbol">BTC/USDT</span><span class="up">$67,240</span><span class="up">+2.4%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">ETH/USDT</span><span class="down">$3,180</span><span class="down">-1.1%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">SOL/USDT</span><span class="up">$142.50</span><span class="up">+4.7%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">BNB/USDT</span><span class="up">$412.00</span><span class="up">+1.2%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">XRP/USDT</span><span class="down">$0.582</span><span class="down">-3.2%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">AVAX/USDT</span><span class="up">$38.90</span><span class="up">+5.1%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">LINK/USDT</span><span class="down">$14.20</span><span class="down">-0.8%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">MATIC/USDT</span><span class="up">$0.91</span><span class="up">+3.3%</span><span class="signal long">LONG</span></div>
+      <!-- Set 2 (duplicate for seamless loop) -->
+      <div class="tick-item"><span class="symbol">BTC/USDT</span><span class="up">$67,240</span><span class="up">+2.4%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">ETH/USDT</span><span class="down">$3,180</span><span class="down">-1.1%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">SOL/USDT</span><span class="up">$142.50</span><span class="up">+4.7%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">BNB/USDT</span><span class="up">$412.00</span><span class="up">+1.2%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">XRP/USDT</span><span class="down">$0.582</span><span class="down">-3.2%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">AVAX/USDT</span><span class="up">$38.90</span><span class="up">+5.1%</span><span class="signal long">LONG</span></div>
+      <div class="tick-item"><span class="symbol">LINK/USDT</span><span class="down">$14.20</span><span class="down">-0.8%</span><span class="signal short">SHORT</span></div>
+      <div class="tick-item"><span class="symbol">MATIC/USDT</span><span class="up">$0.91</span><span class="up">+3.3%</span><span class="signal long">LONG</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat-block">
+    <div class="stat-num">67%</div>
+    <div class="stat-label">Win rate // last 90 days</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-num">3</div>
+    <div class="stat-label">Signals delivered daily</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-num">24/7</div>
+    <div class="stat-label">AI market monitoring</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-num">0</div>
+    <div class="stat-label">Human bias in analysis</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-tag">// HOW IT WORKS</div>
+  <h2 class="section-title">Three signals. Every morning. <span class="dim">No noise.</span></h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">STEP 01</div>
+      <span class="step-icon">📡</span>
+      <h3>AI Scans the Market</h3>
+      <p>Every night, our AI ingests price data, volume, RSI, MACD, and on-chain metrics across the top 50 crypto assets. No sleep. No weekends off.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 02</div>
+      <span class="step-icon">🎯</span>
+      <h3>3 Setups Are Selected</h3>
+      <p>From hundreds of patterns analysed, the AI selects the 3 highest-probability setups — long or short, bull or bear. Only the cleanest setups make the cut.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">STEP 03</div>
+      <span class="step-icon">📬</span>
+      <h3>Delivered to Your Inbox</h3>
+      <p>Before 7am every morning, you receive a clean signal report with entry, target, stop-loss, and a plain-English rationale. Execute or ignore — your call.</p>
+    </div>
+  </div>
+
+  <!-- SAMPLE SIGNAL -->
+  <div class="signal-demo" id="signals">
+    <div class="signal-grid">
+      <div class="sig-field">
+        <label>Asset</label>
+        <div class="val">BTC/USDT</div>
+      </div>
+      <div class="sig-field">
+        <label>Direction</label>
+        <div class="val bull">▲ LONG</div>
+      </div>
+      <div class="sig-field">
+        <label>Entry Zone</label>
+        <div class="val">$64,200 – $64,800</div>
+      </div>
+      <div class="sig-field">
+        <label>Target</label>
+        <div class="val target">$68,500</div>
+      </div>
+      <div class="sig-field">
+        <label>Stop Loss</label>
+        <div class="val stop">$62,900</div>
+      </div>
+    </div>
+    <div class="signal-rationale">
+      <strong style="color: var(--accent); font-size: 11px; letter-spacing: 0.15em;">AI RATIONALE //</strong>&nbsp;&nbsp;
+      BTC has formed a higher low structure on the 4H chart with volume declining into support at $64,200. RSI divergence on the 1H confirms weakening sell pressure. Structure targets the previous high at $68,500. Risk/reward 3.2:1. Confidence: <strong style="color: var(--accent);">HIGH</strong>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- WHY AI -->
+<section id="why">
+  <div class="section-tag">// WHY AI-POWERED</div>
+  <h2 class="section-title">No emotion. No ego. <span class="dim">No bags to pump.</span></h2>
+
+  <div class="vs-human">
+    <div class="vs-col">
+      <h4 class="bad">✗ HUMAN ANALYSTS</h4>
+      <ul class="vs-list bad">
+        <li>Hold bags and shill them as "signals"</li>
+        <li>Go bullish in bull markets, panic in bears</li>
+        <li>Disappear when their calls go wrong</li>
+        <li>Influenced by Twitter/X sentiment</li>
+        <li>Inconsistent methodology</li>
+        <li>Sleep 8 hours. Markets don't.</li>
+      </ul>
+    </div>
+    <div class="vs-col" style="background: var(--bg2);">
+      <h4 class="good">✓ VEKTOR AI</h4>
+      <ul class="vs-list good">
+        <li>Zero financial stake in any asset</li>
+        <li>Reads data equally in all market conditions</li>
+        <li>Every call logged publicly and permanently</li>
+        <li>Immune to social media noise</li>
+        <li>Same rigorous methodology every single day</li>
+        <li>Runs 24/7/365 without exception</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-tag">// PRICING</div>
+  <h2 class="section-title">Simple pricing. <span class="dim">Cancel anytime.</span></h2>
+
+  <div class="pricing-grid">
+    <div class="plan">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price"><sup>£</sup>19<span>/mo</span></div>
+      <div class="plan-desc">Perfect for getting started with AI signals</div>
+      <ul class="plan-features">
+        <li>3 daily AI signals</li>
+        <li>Email delivery by 7am</li>
+        <li>Entry, target & stop-loss</li>
+        <li>Plain-English rationale</li>
+        <li class="dim">Signal history archive</li>
+        <li class="dim">Priority alerts</li>
+      </ul>
+      <button class="plan-btn secondary">GET STARTED →</button>
+    </div>
+
+    <div class="plan featured">
+      <div class="plan-badge">MOST POPULAR</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price"><sup>£</sup>29<span>/mo</span></div>
+      <div class="plan-desc">Everything you need to trade with an edge</div>
+      <ul class="plan-features">
+        <li>5 daily AI signals</li>
+        <li>Email delivery by 7am</li>
+        <li>Entry, target & stop-loss</li>
+        <li>Full technical rationale</li>
+        <li>Signal history archive</li>
+        <li>Weekend market outlook</li>
+      </ul>
+      <button class="plan-btn primary">START FREE TRIAL →</button>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Elite</div>
+      <div class="plan-price"><sup>£</sup>79<span>/mo</span></div>
+      <div class="plan-desc">For serious traders who want everything</div>
+      <ul class="plan-features">
+        <li>Unlimited daily signals</li>
+        <li>Real-time alert delivery</li>
+        <li>Full technical rationale</li>
+        <li>Complete signal archive</li>
+        <li>Weekly macro AI report</li>
+        <li>Priority signal alerts (SMS)</li>
+      </ul>
+      <button class="plan-btn secondary">GET STARTED →</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="logo">VEK<span>T</span>OR</div>
+  <div class="footer-text">
+    VEKTOR provides AI-generated market analysis for educational purposes only. This is not financial advice. Always do your own research. Past signal performance does not guarantee future results.<br><br>
+    © 2025 VEKTOR SIGNALS LTD — ALL RIGHTS RESERVED
+  </div>
+</footer>
+
+</body>
+</html>
