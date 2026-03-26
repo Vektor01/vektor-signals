@@ -7,10 +7,9 @@ const supabase = createClient(
 );
 
 const PRICE_TO_TIER = {
-  'price_REPLACE_STANDARD_MONTHLY': 'standard',
-  'price_REPLACE_STANDARD_ANNUAL':  'standard',
-  'price_REPLACE_VIP_MONTHLY':      'vip',
-  'price_REPLACE_VIP_ANNUAL':       'vip',
+  'price_1TDOtF2QjRYoJfPkvKXvq6r4': 'standard',
+  'price_1TDPQG2QjRYoJfPkC2doh5BO': 'standard',
+  'price_1TDmhf2QjRYoJfPkUietPgLS': 'vip',
 };
 
 exports.handler = async (event) => {
