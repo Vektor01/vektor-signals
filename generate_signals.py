@@ -14,6 +14,24 @@ DATE_LABEL = NOW.strftime("%A %d %B %Y")
 DATE_FILE  = NOW.strftime("%Y%m%d")
 TIME_LABEL = NOW.strftime("%H:%M GMT")
 
+TIER_CONFIG = {
+    "starter": {
+        "subject":  f"📊 Vektor Starter Signals — {DATE_LABEL}",
+        "assets":   ["BTC", "ETH", "XRP"],
+        "preview":  "Your daily BTC, ETH & XRP signals are ready.",
+    },
+    "pro": {
+        "subject":  f"🚀 Vektor Pro Signals — {DATE_LABEL}",
+        "assets":   ["BTC", "ETH", "XRP", "SOL", "BNB", "HYPE"],
+        "preview":  "Your full 6-asset daily signals + macro overview are ready.",
+    },
+    "vip": {
+        "subject":  f"⚡ Vektor Elite Signals — {DATE_LABEL}",
+        "assets":   ["BTC", "ETH", "XRP", "SOL", "BNB", "HYPE"],
+        "preview":  "Your complete Elite daily briefing — all 4 reports attached.",
+    },
+}
+
 def fetch_prices():
     print("Fetching prices...")
     ids = "bitcoin,ethereum,ripple,solana,binancecoin,hyperliquid"
@@ -70,46 +88,86 @@ Generate a daily signal for each asset. Respond ONLY in valid JSON:
     print(f"  Theme: {signals.get('session_theme')}")
     return signals
 
-def send_summary_email(prices, signals):
-    print("Sending summary email...")
+def fetch_subscribers():
+    print("Fetching subscribers...")
+    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
+    resp = requests.get(f"{SUPABASE_URL}/rest/v1/subscribers?select=email,tier,active&active=eq.true", headers=headers, timeout=15)
+    resp.raise_for_status()
+    subs = resp.json()
+    by_tier = {"starter": [], "pro": [], "vip": []}
+    for s in subs:
+        tier = s.get("tier", "starter").lower()
+        if tier == "elite": tier = "vip"
+        if tier in by_tier:
+            by_tier[tier].append(s["email"])
+    for tier, emails in by_tier.items():
+        print(f"  {tier.upper()}: {len(emails)}")
+    return by_tier
+
+def build_email(tier, prices, signals, config):
     theme = signals.get("session_theme", "Daily Signals")
-    price_rows = "".join([
-        f'<tr><td style="padding:6px 0;color:#9A94B8;font-size:13px;border-bottom:1px solid #1E1A35;"><b style="color:#fff;">{k}</b> &nbsp; <span style="color:{"#00C896" if v["change"]>=0 else "#FF3B3B"};">${v["price"]:,.2f} &nbsp; {"+" if v["change"]>=0 else ""}{v["change"]:.1f}%</span> &nbsp; <span style="color:#6E688A;">{signals["signals"].get(k,{}).get("bias","")}</span></td></tr>'
-        for k, v in prices.items()
-    ])
-    html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#080612;font-family:Arial,sans-serif;">
+    macro = signals.get("macro_summary", "")
+    assets = config["assets"]
+    tier_colors = {"starter": "#4DC3FF", "pro": "#7B2FBE", "vip": "#F5C842"}
+    tier_labels = {"starter": "Starter", "pro": "Pro", "vip": "Elite"}
+    color = tier_colors.get(tier, "#7B2FBE")
+    label = tier_labels.get(tier, "")
+    rows = ""
+    for ticker in assets:
+        sig = signals.get("signals", {}).get(ticker, {})
+        bias = sig.get("bias", "")
+        line = sig.get("summary_line", "")
+        p = prices.get(ticker, {})
+        price_str = f"${p.get('price', 0):,.2f}"
+        chg = p.get("change", 0)
+        chg_str = f"+{chg:.1f}%" if chg >= 0 else f"{chg:.1f}%"
+        chg_col = "#00C896" if chg >= 0 else "#FF3B3B"
+        rows += f'<tr><td style="padding:8px 0;border-bottom:1px solid #1E1A35;"><b style="color:#fff;">{ticker}</b> <span style="color:{chg_col};">{price_str} {chg_str}</span> <span style="color:{color};font-weight:bold;">{bias}</span><br><span style="color:#6E688A;font-size:12px;">{line}</span></td></tr>'
+    return f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#080612;font-family:Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#0F0C1E;border:1px solid #2A2240;">
 <tr><td style="padding:24px;border-bottom:1px solid #2A2240;">
-<span style="font-size:22px;font-weight:bold;color:#F5C842;">VEKTOR</span>
-<span style="font-size:22px;font-weight:bold;color:#fff;"> SIGNALS</span>
-<p style="color:#6E688A;font-size:12px;margin:8px 0 0 0;">{DATE_LABEL} — Automated Daily Run</p>
+<span style="font-size:24px;font-weight:bold;color:#F5C842;">VEKTOR</span><span style="font-size:24px;font-weight:bold;color:#fff;"> SIGNALS</span>
+<span style="background:{color};color:#000;font-size:11px;font-weight:bold;padding:3px 10px;border-radius:12px;margin-left:10px;">{label}</span>
+<p style="color:#6E688A;font-size:12px;margin:8px 0 0 0;">{DATE_LABEL}</p>
 </td></tr>
 <tr><td style="padding:20px 24px;">
-<p style="color:#fff;font-size:15px;font-weight:bold;margin:0 0 4px 0;">"{theme}"</p>
-<p style="color:#9A94B8;font-size:13px;margin:0 0 20px 0;">{signals.get("macro_summary","")}</p>
-<table width="100%" cellpadding="0" cellspacing="0">{price_rows}</table>
-<p style="color:#6E688A;font-size:11px;margin:20px 0 0 0;">Automation running successfully. PDFs generating next.</p>
+<p style="color:#fff;font-size:16px;font-weight:bold;margin:0 0 6px 0;">"{theme}"</p>
+<p style="color:#9A94B8;font-size:13px;margin:0 0 20px 0;">{macro}</p>
+<table width="100%">{rows}</table>
+<p style="color:#6E688A;font-size:12px;margin:20px 0 0 0;">Your signal PDFs are attached. Open for full entry zones, targets and stop losses.</p>
 </td></tr>
 <tr><td style="padding:16px 24px;border-top:1px solid #2A2240;text-align:center;">
 <p style="color:#6E688A;font-size:10px;margin:0;">AI market analysis — educational purposes only. Not financial advice.<br>Vektor Signals — vektorsignals.com</p>
 </td></tr></table></body></html>"""
-    payload = {"from": "Vektor Signals <onboarding@resend.dev>", "to": ["markwclohessy@gmail.com"], "subject": f"⚡ Vektor Automation Live — {DATE_LABEL}", "html": html}
-    resp = requests.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"}, json=payload, timeout=30)
-    if resp.status_code in (200, 201):
-        print("  Email sent successfully!")
-    else:
-        print(f"  Email failed: {resp.text}")
+
+def send_emails(subscribers, signals, prices):
+    print("Sending emails...")
+    sent = 0; failed = 0
+    for tier, emails in subscribers.items():
+        if not emails: continue
+        config = TIER_CONFIG.get(tier, TIER_CONFIG["starter"])
+        html = build_email(tier, prices, signals, config)
+        for email in emails:
+            payload = {"from": "Vektor Signals <signals@vektorsignals.com>", "to": [email], "subject": config["subject"], "html": html}
+            resp = requests.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"}, json=payload, timeout=30)
+            if resp.status_code in (200, 201):
+                sent += 1; print(f"  ✅ {tier} → {email}")
+            else:
+                failed += 1; print(f"  ❌ {email}: {resp.text}")
+    print(f"  Total: {sent} sent, {failed} failed")
 
 def main():
-    print("=" * 50)
+    print("=" * 55)
     print(f"  VEKTOR SIGNALS — {DATE_LABEL}")
-    print("=" * 50)
-    prices  = fetch_prices()
-    signals = generate_signals(prices)
-    send_summary_email(prices, signals)
-    print("\n" + "=" * 50)
+    print("=" * 55)
+    prices      = fetch_prices()
+    signals     = generate_signals(prices)
+    subscribers = fetch_subscribers()
+    send_emails(subscribers, signals, prices)
+    print("\n" + "=" * 55)
     print("  COMPLETE")
-    print("=" * 50)
+    print("=" * 55)
 
 if __name__ == "__main__":
     main()
+
