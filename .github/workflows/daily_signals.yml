@@ -2,8 +2,25 @@ name: Vektor Daily Signals
 
 on:
   schedule:
+    # Daily signals — Mon-Fri at 06:30 GMT
     - cron: '30 6 * * 1-5'
+    # Sunday Weekly Briefing — Sunday at 18:00 GMT
+    - cron: '0 18 * * 0'
+    # Black Swan Monitor — every hour
+    - cron: '0 * * * *'
+
+  # Manual trigger from Actions tab
   workflow_dispatch:
+    inputs:
+      run_type:
+        description: 'What to run'
+        required: true
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - sunday_briefing
+          - black_swan_check
 
 jobs:
   generate-and-send:
@@ -22,7 +39,35 @@ jobs:
       - name: Install dependencies
         run: pip install requests reportlab
 
-      - name: Run Vektor signal generator
+      - name: Determine run type
+        id: run_type
+        run: |
+          # Manual override
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.run_type }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get current hour and day
+          HOUR=$(date -u +%H)
+          MINUTE=$(date -u +%M)
+          DAY=$(date -u +%u)  # 1=Mon, 7=Sun
+
+          echo "Current: Day=$DAY Hour=$HOUR Minute=$MINUTE"
+
+          # Sunday 18:00 = Weekly Briefing
+          if [ "$DAY" = "7" ] && [ "$HOUR" = "18" ]; then
+            echo "type=sunday_briefing" >> $GITHUB_OUTPUT
+          # Mon-Fri 06:30 = Daily Signals
+          elif [ "$DAY" != "6" ] && [ "$DAY" != "7" ] && [ "$HOUR" = "06" ]; then
+            echo "type=daily" >> $GITHUB_OUTPUT
+          # All other times = Black Swan check
+          else
+            echo "type=black_swan_check" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Daily Signals
+        if: steps.run_type.outputs.type == 'daily'
         env:
           ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
           COINGECKO_API_KEY:    ${{ secrets.COINGECKO_API_KEY }}
@@ -31,9 +76,30 @@ jobs:
           RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
         run: python generate_signals.py
 
+      - name: Run Sunday Weekly Briefing
+        if: steps.run_type.outputs.type == 'sunday_briefing'
+        env:
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          COINGECKO_API_KEY:    ${{ secrets.COINGECKO_API_KEY }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+        run: python vektor_sunday_briefing.py
+
+      - name: Run Black Swan Monitor
+        if: steps.run_type.outputs.type == 'black_swan_check'
+        env:
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+          COINGECKO_API_KEY:    ${{ secrets.COINGECKO_API_KEY }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+        run: python vektor_black_swan.py
+
       - name: Upload PDFs as artifacts
+        if: steps.run_type.outputs.type == 'daily' || steps.run_type.outputs.type == 'sunday_briefing'
         uses: actions/upload-artifact@v4
         with:
-          name: vektor-signals-${{ github.run_number }}
+          name: vektor-reports-${{ github.run_number }}
           path: outputs/*.pdf
           retention-days: 30
