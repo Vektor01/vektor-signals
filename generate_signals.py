@@ -8,7 +8,7 @@ from vektor_pdf import generate_pdf
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 COINGECKO_API_KEY = os.environ["COINGECKO_API_KEY"]
 SUPABASE_URL      = os.environ["SUPABASE_URL"]
-SUPABASE_KEY      = os.environ["SUPABASE_SERVICE_KEY"]
+SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"].strip()
 RESEND_API_KEY    = os.environ["RESEND_API_KEY"]
 
 NOW        = datetime.now(timezone.utc)
